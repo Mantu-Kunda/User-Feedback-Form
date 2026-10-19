@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#080b1a">
+
+    <title>Neon Feedback | User Feedback App</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Animated background -->
+    <div class="background-effects" aria-hidden="true">
+        <div class="orb orb-one"></div>
+        <div class="orb orb-two"></div>
+        <div class="orb orb-three"></div>
+    </div>
+
+    <main class="page-wrapper">
+
+        <header class="topbar">
+            <a href="index.html" class="brand">
+                <span class="brand-icon">^.^</span>
+                <span>Feedback<span class="brand-accent">Flow</span></span>
+            </a>
+
+            <!-- <span class="status-badge">
+                <span class="status-dot"></span>
+                FEEDBACK PORTAL
+            </span> -->
+        </header>
+
+        <section class="hero">
+            <div class="eyebrow">
+                <span class="sparkle">✦</span>
+                YOUR VOICE MATTERS
+            </div>
+
+            <h1>
+                Share your
+                <span class="gradient-text">experience.</span>
+            </h1>
+
+            <p class="hero-description">
+                Every idea makes us better. Tell us what you think
+                and help us create something amazing.
+            </p>
+        </section>
+
+        <section class="feedback-card">
+
+            <div class="card-header">
+                <div>
+                    <h2>Send us a message</h2>
+                    <p>Fill in the details below to get started.</p>
+                </div>
+
+                
+            </div>
+
+            <form action="feedback" method="post" accept-charset="UTF-8">
+
+                <div class="field-group">
+                    <label for="name">Full name <span>*</span></label>
+
+                    <div class="input-wrapper">
+                        <span class="field-icon" aria-hidden="true">♙</span>
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            placeholder="Enter your full name"
+                            autocomplete="name"
+                            maxlength="100"
+                            required>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label for="email">Email address <span>*</span></label>
+
+                    <div class="input-wrapper">
+                        <span class="field-icon" aria-hidden="true">✉</span>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            placeholder="you@example.com"
+                            autocomplete="email"
+                            maxlength="254"
+                            required>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <div class="label-row">
+                        <label for="feedback">Your feedback <span>*</span></label>
+                        <span class="field-hint">Be honest. Be kind.</span>
+                    </div>
+
+                    <textarea
+                        id="feedback"
+                        name="feedback"
+                        rows="5"
+                        maxlength="2000"
+                        placeholder="Tell us about your experience..."
+                        required></textarea>
+
+                    <div class="textarea-footer">
+                        <span>We appreciate your time.</span>
+                        <span>Max 2000 characters</span>
+                    </div>
+                </div>
+
+               
+
+                <div class="button-group">
+
+                    <button type="submit" class="submit-button">
+                        <span>Submit Feedback</span>
+                        <span class="button-arrow" aria-hidden="true">↗</span>
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="get-button"
+                        formmethod="get">
+                        Try GET Request
+                    </button>
+
+                </div>
+
+            </form>
+
+           
+
+        </section>
+
+        <footer class="page-footer">
+            <p>Made with <span class="heart">♥</span> and a little creativity.</p>
+            <p class="footer-caption">MANTU KUNDA</p>
+            <p class="footer-caption">USER FEEDBACK APPLICATION · 2026</p>
+        </footer>
+
+    </main>
+
+</body>
+</html>
