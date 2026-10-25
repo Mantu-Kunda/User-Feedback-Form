@@ -3,6 +3,10 @@ package com.feedback;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -15,7 +19,6 @@ public class FeedbackServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
-    // Handles GET Request
     @Override
     protected void doGet(HttpServletRequest request,
                          HttpServletResponse response)
@@ -24,7 +27,6 @@ public class FeedbackServlet extends HttpServlet {
         processFeedback(request, response, "GET");
     }
 
-    // Handles POST Request
     @Override
     protected void doPost(HttpServletRequest request,
                           HttpServletResponse response)
@@ -34,7 +36,6 @@ public class FeedbackServlet extends HttpServlet {
         processFeedback(request, response, "POST");
     }
 
-    // Process feedback submitted by the user
     private void processFeedback(HttpServletRequest request,
                                  HttpServletResponse response,
                                  String method)
@@ -42,89 +43,157 @@ public class FeedbackServlet extends HttpServlet {
 
         String name = request.getParameter("name");
         String email = request.getParameter("email");
-        String feedback = request.getParameter("feedback");
+        String message = request.getParameter("feedback");
+
+        name = name == null ? "" : name.trim();
+        email = email == null ? "" : email.trim();
+        message = message == null ? "" : message.trim();
 
         response.setContentType("text/html;charset=UTF-8");
 
-        PrintWriter out = response.getWriter();
+        if (name.isEmpty() || email.isEmpty() || message.isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().println(
+                "<h2>Please provide your name, email, and feedback.</h2>"
+                + "<a href='index.html'>Return to form</a>"
+            );
+            return;
+        }
 
-        out.println("<!DOCTYPE html>");
-        out.println("<html>");
-        out.println("<head>");
-        out.println("<meta charset='UTF-8'>");
-        out.println("<title>Feedback Confirmation</title>");
+        Connection connection = null;
 
-        // CSS Styling
-        out.println("<style>");
+        try {
+            connection = DBConnection.getConnection();
+            connection.setAutoCommit(false);
 
-        out.println("body {");
-        out.println("font-family: Arial, sans-serif;");
-        out.println("background: linear-gradient(135deg,#667eea,#764ba2);");
-        out.println("display:flex;");
-        out.println("justify-content:center;");
-        out.println("align-items:center;");
-        out.println("min-height:100vh;");
-        out.println("margin:0;");
-        out.println("}");
+            long submitterId;
 
-        out.println(".card {");
-        out.println("background:white;");
-        out.println("padding:35px;");
-        out.println("border-radius:15px;");
-        out.println("width:420px;");
-        out.println("max-width:85%;");
-        out.println("box-shadow:0 10px 30px rgba(0,0,0,0.2);");
-        out.println("}");
+            // Insert a new submitter or update the name
+            // if this email address already exists.
+            String submitterSql =
+                "INSERT INTO submitters (name, email) VALUES (?, ?) "
+                + "ON DUPLICATE KEY UPDATE name = VALUES(name)";
 
-        out.println("h2 {color:#28a745;text-align:center;}");
-        out.println("p {color:#444;line-height:1.6;overflow-wrap:anywhere;}");
-        out.println("strong {color:#222;}");
+            try (PreparedStatement ps = connection.prepareStatement(
+                    submitterSql)) {
 
-        out.println("a {");
-        out.println("display:block;");
-        out.println("text-align:center;");
-        out.println("background:#667eea;");
-        out.println("color:white;");
-        out.println("padding:12px;");
-        out.println("border-radius:7px;");
-        out.println("text-decoration:none;");
-        out.println("margin-top:25px;");
-        out.println("}");
+                ps.setString(1, name);
+                ps.setString(2, email);
+                ps.executeUpdate();
+            }
 
-        out.println("</style>");
-        out.println("</head>");
+            // Find the submitter's database ID.
+            String findSubmitterSql =
+                "SELECT submitter_id FROM submitters WHERE email = ?";
 
-        out.println("<body>");
-        out.println("<div class='card'>");
+            try (PreparedStatement ps = connection.prepareStatement(
+                    findSubmitterSql)) {
 
-        out.println("<h2>Feedback Submitted Successfully!</h2>");
+                ps.setString(1, email);
 
-        out.println("<p>Thank you for your feedback.</p>");
-        out.println("<hr>");
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        throw new SQLException("Submitter was not found.");
+                    }
 
-        out.println("<p><strong>Name:</strong> "
-                + escapeHtml(name) + "</p>");
+                    submitterId = rs.getLong("submitter_id");
+                }
+            }
 
-        out.println("<p><strong>Email:</strong> "
-                + escapeHtml(email) + "</p>");
+            // Save the feedback message.
+            String feedbackSql =
+                "INSERT INTO feedback "
+                + "(submitter_id, category_id, message, status, rating) "
+                + "VALUES (?, NULL, ?, 'NEW', NULL)";
 
-        out.println("<p><strong>Feedback:</strong> "
-                + escapeHtml(feedback) + "</p>");
+            try (PreparedStatement ps = connection.prepareStatement(
+                    feedbackSql)) {
 
-        out.println("<p><strong>Request Method:</strong> "
-                + method + "</p>");
+                ps.setLong(1, submitterId);
+                ps.setString(2, message);
+                ps.executeUpdate();
+            }
 
-        out.println("<a href='index.html'>Submit Another Feedback</a>");
+            // Both database operations succeeded.
+            connection.commit();
 
-        out.println("</div>");
-        out.println("</body>");
-        out.println("</html>");
+            // Display confirmation only after the commit.
+            PrintWriter out = response.getWriter();
 
+            out.println("<!DOCTYPE html>");
+            out.println("<html><head><meta charset='UTF-8'>");
+            out.println("<title>Feedback Confirmation</title>");
+            out.println("<style>");
+            out.println("body {font-family:Arial,sans-serif;"
+                    + "background:linear-gradient(135deg,#667eea,#764ba2);"
+                    + "display:flex;justify-content:center;"
+                    + "align-items:center;min-height:100vh;margin:0;}");
+            out.println(".card {background:white;padding:35px;"
+                    + "border-radius:15px;width:420px;max-width:85%;"
+                    + "box-shadow:0 10px 30px rgba(0,0,0,0.2);}");
+            out.println("h2 {color:#28a745;text-align:center;}");
+            out.println("p {color:#444;line-height:1.6;"
+                    + "overflow-wrap:anywhere;}");
+            out.println("a {display:block;text-align:center;"
+                    + "background:#667eea;color:white;padding:12px;"
+                    + "border-radius:7px;text-decoration:none;margin-top:25px;}");
+            out.println("</style></head><body>");
+            out.println("<div class='card'>");
+            out.println("<h2>Feedback Submitted Successfully!</h2>");
+            out.println("<p>Thank you for your feedback.</p>");
+            out.println("<hr>");
+            out.println("<p><strong>Name:</strong> "
+                    + escapeHtml(name) + "</p>");
+            out.println("<p><strong>Email:</strong> "
+                    + escapeHtml(email) + "</p>");
+            out.println("<p><strong>Feedback:</strong> "
+                    + escapeHtml(message) + "</p>");
+            out.println("<p><strong>Request Method:</strong> "
+                    + escapeHtml(method) + "</p>");
+            out.println("<a href='index.html'>Submit Another Feedback</a>");
+            out.println("</div></body></html>");
+
+        } catch (SQLException e) {
+
+            if (connection != null) {
+                try {
+                    connection.rollback();
+                } catch (SQLException rollbackError) {
+                    e.addSuppressed(rollbackError);
+                }
+            }
+
+            getServletContext().log(
+                "Failed to save submitted feedback.", e
+            );
+
+            response.setStatus(
+                HttpServletResponse.SC_INTERNAL_SERVER_ERROR
+            );
+
+            response.getWriter().println(
+                "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
+                + "<title>Submission Error</title></head><body>"
+                + "<h2>We could not save your feedback.</h2>"
+                + "<p>Please try again later.</p>"
+                + "<a href='index.html'>Return to form</a>"
+                + "</body></html>"
+            );
+
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    getServletContext().log(
+                        "Failed to close database connection.", e
+                    );
+                }
+            }
+        }
     }
 
-    // Prevent submitted text from being interpreted as HTML
     private String escapeHtml(String value) {
-
         if (value == null) {
             return "";
         }
